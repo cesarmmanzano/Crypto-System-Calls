@@ -17,12 +17,36 @@
 #include <linux/fcntl.h>
 #include <linux/slab.h>
 
+/* ================================================== */
+
+struct tcrypt_result
+{
+	struct completion completion;
+	int err;
+};
+
+struct skcipher_def
+{
+	struct scatterlist sg;
+	struct crypto_skcipher *skcipher;
+	struct skcipher_request *req;
+	struct tcrypt_result result;
+};
+
+/* ================================================== */
+
+static int encrypt(char message[], int messageLength);
+static void test_skcipher_cb(struct crypto_async_request *req, int error);
+void clearMessage(char message[]);
+
+/* ================================================== */
+
 asmlinkage ssize_t sys_write_crypt(int fd, const void *buf, size_t nbytes)
 {
 	char message[256];
 	mm_segment_t old_fs;
 	
-	sprintf(message, "%s", buf);
+	sprintf(message, "%s", (char*)buf);
 	printk("<<MSG>>: [%s]", message);
 	encrypt(message, strlen(message));
 
@@ -70,15 +94,11 @@ static int encrypt(char message[], int messageLength)
 
 	skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG, test_skcipher_cb, &sk.result);
 
-	/* ==================== */
-
 	if (crypto_skcipher_setkey(skcipher, key_encrypt, 16))
 	{
 		pr_err("fail setting key");
 		goto out;
 	}
-
-	/* ==================== */
 
 	scratchpad = vmalloc(messageLength);
 
@@ -90,15 +110,13 @@ static int encrypt(char message[], int messageLength)
 
 	memcpy(scratchpad, message, messageLength);
 
-	/* ==================== */
-
 	/* Setando struct */
 	sk.skcipher = skcipher;
 	sk.req = req;
 
 	/* Cifrar / Encrypt */
 	sg_init_one(&sk.sg, scratchpad, 16);
-	skcipher_request_set_crypt(req, &sk.sg, &sk.sg, 16, iv_encrypt);
+	skcipher_request_set_crypt(req, &sk.sg, &sk.sg, 16, NULL);
 	init_completion(&sk.result.completion);
 
 	rc = crypto_skcipher_encrypt(req);
@@ -120,8 +138,6 @@ static int encrypt(char message[], int messageLength)
 	print_hex_dump(KERN_DEBUG, "Result Data Encrypt: ", DUMP_PREFIX_NONE, 16, 1, result, 16, true);
 	printk("========================================");
 
-	/* ==================== */
-
 	out:
 	if (skcipher)
 		crypto_free_skcipher(skcipher);
@@ -136,6 +152,20 @@ static int encrypt(char message[], int messageLength)
 		vfree(scratchpad);
 
 	return 0;
+}
+
+/* ================================================== */
+
+/* Callback function */
+static void test_skcipher_cb(struct crypto_async_request *req, int error)
+{
+	struct tcrypt_result *result = req->data;
+
+	if (error == -EINPROGRESS)
+		return;
+	result->err = error;
+	complete(&result->completion);
+	//pr_info("Encryption finished successfully\n");
 }
 
 /* ================================================== */
