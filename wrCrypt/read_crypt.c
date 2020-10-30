@@ -44,14 +44,16 @@ void clearMessage(char message[]);
 
 asmlinkage ssize_t sys_read_crypt(int fd, const void *buf, size_t nbytes)
 {
-	unsigned char message[256];
+	char message[256];
 	mm_segment_t old_fs;
-
-	pr_info("MSG [%s]: ", message);	
 
 	old_fs = get_fs();
 	set_fs(KERNEL_DS);
 	sys_read(fd, buf, nbytes);
+
+	//transformar em char
+	//decrypt(message, strlen(message));
+		
 	set_fs(old_fs);
 	
 	return 1;
@@ -68,14 +70,14 @@ static int decrypt(char *message, int messageLength)
 
 	int ret = -EFAULT;
 
-	char *key_decrypt = NULL;
+	char key[16] = "0123456789ABCDEF";
 	char *scratchpad = NULL;
 	char *result = NULL;
 
 	/* ==================== */
 
 	/* Allocate a cipher handle for an skcipher */
-	skcipher = crypto_alloc_skcipher("aes(aes)", 0, 0);
+	skcipher = crypto_alloc_skcipher("ecb(aes)", 0, 0);
 	if (IS_ERR(skcipher))
 	{
 		pr_info("could not allocate skcipher handle\n");
@@ -95,12 +97,7 @@ static int decrypt(char *message, int messageLength)
 
 	/* ==================== */
 
-	/* Set key */
-	key_decrypt = vmalloc(16);
-
-	strcpy(key_decrypt, key);
-
-	if (crypto_skcipher_setkey(skcipher, key_decrypt, 16))
+	if (crypto_skcipher_setkey(skcipher, key, 16))
 	{
 		pr_err("fail setting key");
 		goto out;
@@ -126,7 +123,7 @@ static int decrypt(char *message, int messageLength)
 
 	/* Decifrar / Decrypt */
 	sg_init_one(&sk.sg, scratchpad, 16);
-	skcipher_request_set_crypt(req, &sk.sg, &sk.sg, 16, iv_decrypt);
+	skcipher_request_set_crypt(req, &sk.sg, &sk.sg, 16, NULL);
 	init_completion(&sk.result.completion);
 
 	rc = crypto_skcipher_decrypt(req);
@@ -156,9 +153,6 @@ static int decrypt(char *message, int messageLength)
 
 	if (req)
 		skcipher_request_free(req);
-
-	if (key_decrypt)
-		vfree(key_decrypt);
 
 	if (scratchpad)
 		vfree(scratchpad);
