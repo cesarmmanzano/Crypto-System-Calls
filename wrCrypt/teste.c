@@ -15,9 +15,12 @@ void clearMessage(char[]);
 
 int main()
 {  
-	char message[BUFFER_LENGTH], receive[BUFFER_LENGTH];;	
+	char message[BUFFER_LENGTH], receive[BUFFER_LENGTH];	
 	int ret, fd;
 	int option, option2;
+	int sizeRet;
+	void *buf; 
+  
 	do
 	{
 		clearMessage(message);
@@ -48,18 +51,15 @@ int main()
 				scanf("%[^\n]%*c", message);
 				printf("Mensagem Enviada: %s", message);
 				getchar();
+				buf = message;
 
-				if ((fd = open("/home/cesar/Downloads/test.txt", O_WRONLY | O_TRUNC)) < 0)
+				if ((fd = open("/home/cesar/Downloads/test.txt", O_WRONLY | O_TRUNC | O_CREAT)) < 0)
 				{
 					perror("Failed to open the file...");
 					return errno;
 				}
 
-				if ((ret = write(fd, message, strlen(message))) < 0)
-				{
-					perror("Failed to read message");
-					return errno;
-				}
+				sizeRet = syscall(333, fd, buf, strlen(message));
 				
 				if ((ret = close(fd)) < 0)
 				{
@@ -77,12 +77,11 @@ int main()
 					return errno;
 				}
 
-				if ((ret = read(fd, receive, BUFFER_LENGTH)) < 0)
-				{
-					perror("Failed to read message");
-					return errno;
-				}	
+				buf = NULL;
+        
+				ret = syscall(334, fd, buf, sizeRet);	
 				
+        sprintf(receive, "%s", (char*)buf);
 				printf("Mensagem lida: %s\n", receive);
 				getchar();
 
@@ -105,19 +104,6 @@ int main()
 		getchar();
 
 	}while(option2 != 0);
-	
-
-	/*
-	printf("Invoking 'listProcessInfo' system call");
-         
-	long int ret_status = syscall(333); // 333 is the syscall number
-         
-	if(ret_status == 0) 
-		printf("System call 'listProcessInfo' executed correctly. Use dmesg to check processInfo\n");
-    
-	else 
-		printf("System call 'listProcessInfo' did not execute as expected\n");
-	*/
 
 	return 0;
 }
