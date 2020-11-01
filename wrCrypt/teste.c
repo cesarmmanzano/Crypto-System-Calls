@@ -20,7 +20,7 @@ int main()
 	int option, option2;
 	int sizeRet;
 	void *buf; 
-
+  
 	do
 	{
 		clearMessage(message);
@@ -44,7 +44,6 @@ int main()
 
 		switch(option)
 		{
-
 			case 0: return 0;
 
 			case 1: 
@@ -79,8 +78,10 @@ int main()
 				}
 
 				buf = NULL;
+        
 				ret = syscall(334, fd, buf, sizeRet);	
 				
+        sprintf(receive, "%s", (char*)buf);
 				printf("Mensagem lida: %s\n", receive);
 				getchar();
 
@@ -103,19 +104,6 @@ int main()
 		getchar();
 
 	}while(option2 != 0);
-	
-
-	/*
-	printf("Invoking 'listProcessInfo' system call");
-         
-	long int ret_status = syscall(333); // 333 is the syscall number
-         
-	if(ret_status == 0) 
-		printf("System call 'listProcessInfo' executed correctly. Use dmesg to check processInfo\n");
-    
-	else 
-		printf("System call 'listProcessInfo' did not execute as expected\n");
-	*/
 
 	return 0;
 }
