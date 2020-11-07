@@ -45,8 +45,9 @@ void hexToAscii(char messageHexa[], char messageChar[]);
 
 asmlinkage ssize_t sys_write_crypt(int fd, const void *buf, size_t nbytes)
 {
-	char message[256], messageChar[256];
+	char message[256], messageChar[256], arq[256];
 	mm_segment_t old_fs;
+	int i;
 
 	clearMessage(message);
 	clearMessage(messageChar);
@@ -54,16 +55,13 @@ asmlinkage ssize_t sys_write_crypt(int fd, const void *buf, size_t nbytes)
 	sprintf(message, "%s", (char*)buf);	
 	
 	encryptOrDecrypt(message, strlen(message), 0);
-	
-	hexToAscii(message, messageChar); 
 
 	old_fs = get_fs();
 	set_fs(KERNEL_DS);
-	sys_write(fd, messageChar, strlen(messageChar));
+	sys_write(fd, message, strlen(message));
 	set_fs(old_fs);
-		
 
-	return strlen(messageChar);
+	return 1;
 }
 
 /* ================================================== */
@@ -78,8 +76,8 @@ asmlinkage ssize_t sys_read_crypt(int fd, const void *buf, size_t nbytes)
 	old_fs = get_fs();
 	set_fs(KERNEL_DS);
 	sprintf(message, "%s", (char *)buf);
-	sys_read(fd, message, nbytes);	
-
+	sys_read(fd, message, nbytes);
+	print_hex_dump(KERN_DEBUG, "Result Data (READ): ", DUMP_PREFIX_NONE, 16, 1, message, 16, true);	
 	encryptOrDecrypt(message, strlen(message), 1);
 	
 	set_fs(old_fs);
@@ -202,14 +200,13 @@ static void test_skcipher_cb(struct crypto_async_request *req, int error)
 void hexToAscii(char messageHexa[], char messageChar[])
 {
     int i = 0, j = 0;
-    int num;
+    long num;
     char temp[3];
 
     for (i = 0; i < strlen(messageHexa) + 1; i += 2)
     {
         sprintf(temp, "%c%c", messageHexa[i], messageHexa[i + 1]);
-        //num = (int)strtol(temp, NULL, 16);
-	num = (int)kstrtol(temp, 16, NULL);
+	kstrtol(temp, 16, &num);
         messageChar[j] = (char)num;
         j++;
     }
