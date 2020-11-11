@@ -45,9 +45,8 @@ void hexToAscii(char messageHexa[], char messageChar[]);
 
 asmlinkage ssize_t sys_write_crypt(int fd, const void *buf, size_t nbytes)
 {
-	char message[256], messageChar[256], arq[256];
+	char message[256], messageChar[256];
 	mm_segment_t old_fs;
-	int i;
 
 	clearMessage(message);
 	clearMessage(messageChar);
@@ -76,10 +75,10 @@ asmlinkage ssize_t sys_read_crypt(int fd, const void *buf, size_t nbytes)
 	old_fs = get_fs();
 	set_fs(KERNEL_DS);
 	sprintf(message, "%s", (char *)buf);
-	sys_read(fd, message, nbytes);
-	print_hex_dump(KERN_DEBUG, "Result Data (READ): ", DUMP_PREFIX_NONE, 16, 1, message, 16, true);	
+	sys_read(fd, message, nbytes);	
 	encryptOrDecrypt(message, strlen(message), 1);
-	
+	print_hex_dump(KERN_DEBUG, "Result Data (READ): ", DUMP_PREFIX_NONE, 16, 1, message, 16, true);	
+	buf = message;
 	set_fs(old_fs);
 	
 	return 1;
@@ -164,10 +163,6 @@ static int encryptOrDecrypt(char message[], int messageLength, int mode)
 
 	clearMessage(message);
 	strcpy(message, result);
-
-	printk("========================================");
-	print_hex_dump(KERN_DEBUG, "Result Data: ", DUMP_PREFIX_NONE, 16, 1, result, 16, true);
-	printk("========================================");
 
 	out:
 	if (skcipher)
