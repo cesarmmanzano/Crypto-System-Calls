@@ -162,7 +162,7 @@ static int encryptOrDecrypt(char message[], int messageLength, int mode)
 	result = sg_virt(&sk.sg);
 
 	clearMessage(message);
-	strcpy(message, result);
+	memcpy(message, result, strlen(result));
 
 	out:
 	if (skcipher)
