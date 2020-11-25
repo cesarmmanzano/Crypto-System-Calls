@@ -39,17 +39,15 @@ struct skcipher_def
 static int encryptOrDecrypt(char message[], int messageLength, int mode);
 static void test_skcipher_cb(struct crypto_async_request *req, int error);
 void clearMessage(char message[]);
-void hexToAscii(char messageHexa[], char messageChar[]);
 
 /* ================================================== */
 
 asmlinkage ssize_t sys_write_crypt(int fd, const void *buf, size_t nbytes)
 {
-	char message[256], messageChar[256];
+	char message[256];
 	mm_segment_t old_fs;
 
 	clearMessage(message);
-	clearMessage(messageChar);
 
 	sprintf(message, "%s", (char*)buf);	
 	
@@ -69,18 +67,18 @@ asmlinkage ssize_t sys_read_crypt(int fd, const void *buf, size_t nbytes)
 {
 	char message[256];
 	mm_segment_t old_fs;
+	int tam;
 
 	clearMessage(message);
 
 	old_fs = get_fs();
-	set_fs(KERNEL_DS);
-	sprintf(message, "%s", (char *)buf);
+	set_fs(KERNEL_DS);	
 	sys_read(fd, message, nbytes);	
-	encryptOrDecrypt(message, strlen(message), 1);
-	print_hex_dump(KERN_DEBUG, "Result Data (READ): ", DUMP_PREFIX_NONE, 16, 1, message, 16, true);	
-	buf = message;
 	set_fs(old_fs);
 	
+	encryptOrDecrypt(message, strlen(message), 1);
+	//buf = message;
+
 	return 1;
 }
 
@@ -162,7 +160,11 @@ static int encryptOrDecrypt(char message[], int messageLength, int mode)
 	result = sg_virt(&sk.sg);
 
 	clearMessage(message);
-	memcpy(message, result, strlen(result));
+	strcpy(message, result);
+
+	printk("========================================");
+	print_hex_dump(KERN_DEBUG, "Result Data: ", DUMP_PREFIX_NONE, 16, 1, result, 16, true);
+	printk("========================================");
 
 	out:
 	if (skcipher)
@@ -177,7 +179,6 @@ static int encryptOrDecrypt(char message[], int messageLength, int mode)
 	return 0;
 }
 
-
 /* ================================================== */
 
 static void test_skcipher_cb(struct crypto_async_request *req, int error)
@@ -188,23 +189,6 @@ static void test_skcipher_cb(struct crypto_async_request *req, int error)
 		return;
 	result->err = error;
 	complete(&result->completion);
-}
-
-/* ================================================== */
-
-void hexToAscii(char messageHexa[], char messageChar[])
-{
-    int i = 0, j = 0;
-    long num;
-    char temp[3];
-
-    for (i = 0; i < strlen(messageHexa) + 1; i += 2)
-    {
-        sprintf(temp, "%c%c", messageHexa[i], messageHexa[i + 1]);
-	kstrtol(temp, 16, &num);
-        messageChar[j] = (char)num;
-        j++;
-    }
 }
 
 /* ================================================== */
