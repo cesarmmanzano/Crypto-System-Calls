@@ -1,2 +1,2 @@
-obj-y+=wr_crypt.o
+obj-y:=wr_crypt.o
 
