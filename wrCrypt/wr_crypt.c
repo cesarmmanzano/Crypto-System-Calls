@@ -47,8 +47,6 @@ asmlinkage ssize_t sys_write_crypt(int fd, const void *buf, size_t nbytes)
 	char message[256];
 	mm_segment_t old_fs;
 
-	//clearMessage(message);
-
 	sprintf(message, "%s", (char*)buf);	
 	
 	encryptOrDecrypt(message, strlen(message), 0);
@@ -68,15 +66,13 @@ asmlinkage ssize_t sys_read_crypt(int fd, const void *buf, size_t nbytes)
 	char message[256];
 	mm_segment_t old_fs;
 
-	//clearMessage(message);
-
 	old_fs = get_fs();
 	set_fs(KERNEL_DS);	
 	sys_read(fd, message, nbytes);	
 	set_fs(old_fs);
 	
 	encryptOrDecrypt(message, strlen(message), 1);
-	buf = message;
+	strcpy((char*)buf, message);
 
 	return 1;
 }
