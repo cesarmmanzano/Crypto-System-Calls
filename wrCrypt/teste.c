@@ -127,7 +127,7 @@ int writeCrypt(char message[])
 
 int readCrypt(char receive[])
 {
-	void *buf = NULL;
+	char buf[BUFFER_LENGTH];
 	
 	if ((fd = open(path, O_RDONLY)) < 0)
 	{
@@ -135,9 +135,11 @@ int readCrypt(char receive[])
 		return errno;
 	}
 
-	ret = syscall(334, fd, buf, BUFFER_LENGTH);	
+	ret = syscall(334, fd, &buf, BUFFER_LENGTH);
 
-	printf("Mensagem lida: %s\n", (char*)buf);
+	printf("Mensagem lida: %s\n", buf);
+	printf("RET: %d\n", ret);
+	printHexDump(receive, strlen(receive));
 	getchar();
 				
 	if ((ret = close(fd)) < 0)
