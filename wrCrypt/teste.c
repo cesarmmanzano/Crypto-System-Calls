@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <stdio_ext.h>
+#include <stdbool.h>
 
 #define BUFFER_LENGTH 256
 
@@ -20,6 +21,7 @@ void printHexDump(const void *, int);
 
 int ret, fd;
 char *path = "./test.txt";
+bool wasWritten = false;
 
 int main()
 {  
@@ -54,20 +56,28 @@ int main()
 			case 0: return 0;
 
 			case 1: 
-
+				wasWritten = true;
 				writeCrypt(message);
 
 				break;
 
 			case 2: 
-
-				readCrypt(receive);
+				if(wasWritten)
+					readCrypt(receive);
+				else{
+					printf("Voce precisa escrever algo no arquivo antes de ler");
+					getchar();
+				}
 
 				break;
 
 			case 3:
-
-				readFile(receive);
+				if(wasWritten)
+					readFile(receive);
+				else{
+					printf("Voce precisa escrever algo no arquivo antes de ler");
+					getchar();
+				}					
 
 				break;
 		}
@@ -90,7 +100,7 @@ int main()
 
 int writeCrypt(char message[])
 {
-	void *bufWrite = NULL;
+	void *buf = NULL;
 
 	if ((fd = open(path, O_WRONLY | O_CREAT | O_TRUNC)) < 0)
 	{
@@ -101,10 +111,10 @@ int writeCrypt(char message[])
 	printf("Digite a mensagem para ser cifrada: ");
 	scanf("%[^\n]%*c", message);
 	printf("Mensagem Enviada: %s", message);								
-	bufWrite = message;
+	buf = message;
 	getchar();				
 
-	syscall(333, fd, bufWrite, strlen(message));
+	syscall(333, fd, buf, strlen(message));
 
 	if ((ret = close(fd)) < 0)
 	{
@@ -117,7 +127,7 @@ int writeCrypt(char message[])
 
 int readCrypt(char receive[])
 {
-	void *bufRead = NULL;
+	void *buf = NULL;
 	
 	if ((fd = open(path, O_RDONLY)) < 0)
 	{
@@ -125,11 +135,9 @@ int readCrypt(char receive[])
 		return errno;
 	}
 
-	ret = syscall(334, fd, bufRead, BUFFER_LENGTH);	
+	ret = syscall(334, fd, buf, BUFFER_LENGTH);	
 
-	sprintf(receive, "%s", (char *)bufRead);
-	printf("Mensagem lida: %s\n", receive);
-	printHexDump(receive, strlen(receive));
+	printf("Mensagem lida: %s\n", (char*)buf);
 	getchar();
 				
 	if ((ret = close(fd)) < 0)
@@ -155,7 +163,7 @@ int readFile(char receive[])
 		return errno;
 	}
 
-	printf("Mensagem cifrada no arquivo:\n%s\n", receive);
+	printf("Mensagem cifrada no arquivo: ");
 	printHexDump(receive, strlen(receive));
 	getchar();
 
